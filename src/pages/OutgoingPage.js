@@ -28,11 +28,13 @@ import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import DownloadIcon from '@mui/icons-material/Download';
 import InfoIcon from '@mui/icons-material/Info';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { PageTitle } from "../components/common/PageTitle";
-import React, { useMemo, useState } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import axios from "axios";
 import { useEffect } from "react";
 import { BASE_URL } from "../config/config";
+import { AuthContext } from "../context/AuthContext";
 
 const style = {
     position: 'absolute',
@@ -59,11 +61,15 @@ const OutgoingPage = () => {
     });
     const [searchQuery, setSearchQuery] = useState("");
     const [availableItems, setAvailableItems] = useState([]);
+    const [role, setRole] = useState('staff');
+
+    const { authToken } = useContext(AuthContext);
 
     const handleOpen = () => setOpenModal(true);
     const handleClose = () => setOpenModal(false);
 
     useEffect(() => {
+        handleGetProfile();
         handleGetOutboundData();
         return () => { }
     }, [])
@@ -78,6 +84,26 @@ const OutgoingPage = () => {
             }
         } catch (error) {
             console.log("Failed get available item", error);
+        }
+    }
+
+    const handleGetProfile = async () => {
+        try {
+            const url = `${BASE_URL}/auth/profile`;
+            const config = {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            const response = await axios.get(url, config);
+            if (response.data) {
+                const dataRole = response.data.data.role;
+                setRole(dataRole);
+            }
+        } catch (error) {
+            console.log("Failed get profile", error)
         }
     }
 
@@ -120,6 +146,20 @@ const OutgoingPage = () => {
             });
         } catch (error) {
             console.log("Failed submit data", error);
+        }
+    }
+
+    const handleDeleteData = async (id) => {
+        if (window.confirm("Apakah Anda yakin ingin menghapus barang ini?")) {
+            try {
+                const url = `${BASE_URL}/outbound/${id}`;
+                const response = await axios.delete(url);
+                if (response.data) {
+                    await handleGetOutboundData();
+                }
+            } catch (error) {
+                console.log("Failed deleted item");
+            }
         }
     }
 
@@ -213,6 +253,13 @@ const OutgoingPage = () => {
                                         <TableCell align="center">
                                             <IconButton aria-label="download" onClick={() => handleDownload(row)}>
                                                 <DownloadIcon />
+                                            </IconButton>
+                                            <IconButton
+                                                color="error"
+                                                size="small"
+                                                onClick={() => handleDeleteData(row.id)}
+                                            >
+                                                <DeleteIcon fontSize="small" />
                                             </IconButton>
                                         </TableCell>
                                     </TableRow>
